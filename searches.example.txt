@@ -1,0 +1,6 @@
+# One Immobilienscout24 saved-search URL per line.
+# Keep full URL (including saveSearchId and filters).
+# Lines starting with # are ignored.
+
+https://www.immobilienscout24.de/Suche/shape/wohnung-mieten?shape=EXAMPLE_SHAPE_1&numberofrooms=2.0-&price=1000.0-2000.0&livingspace=60.0-&saveSearchId=123456789&enteredFrom=saved_search
+https://www.immobilienscout24.de/Suche/shape/wohnung-mieten?shape=EXAMPLE_SHAPE_2&numberofrooms=1.5-&price=700.0-1500.0&livingspace=40.0-&saveSearchId=987654321&enteredFrom=saved_search

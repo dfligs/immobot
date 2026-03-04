@@ -1,159 +1,175 @@
-# Automatic Wohnung Search Bot 
+# Immobilienscout24 Saved-Search Auto Message Bot
 
-**Pay attention to the robots.txt file on websites and the related rules therein before you use any spiders to scrape data from websites, please respect the rules and use this script at your own risk**
+Monitors one or multiple Immobilienscout24 saved searches and sends a pre-written message when a new listing appears.
 
-**Support and bug fixes for immoscout24 are needed. Currently the script only works properly for wg-gesucht.de**
+## What this version does
 
-Now you need to put your message to the landlord in a file named "message.txt" instead of in the script. 
+- Works with `https://www.immobilienscout24.de/` saved searches.
+- Accepts one or many saved-search URLs (for example links containing `saveSearchId=...`).
+- Tracks already seen listings in a local state file.
+- Sends your pre-written message to newly detected listings.
+- Reports failed auto-send attempts in console and in a JSONL log file.
 
-## Introduction
+## Important notes
 
-Looking for a flat in big cities can be a pain in the eye (ass) due to many different reasons, e.g. you are a student and many landlords don't like students; or you don't speak German so well and landlords, most of who are in their old ages, cannot speak English so well; or there are just simply too many people looking for a nice flat, whenever a new offer apears online the landlord will receive tons of applications and they have nothing to do but to choose the first ones who sent them the applications. So making sure that your application always apear among the first emails in the landlords' inbox is crucial to get you a chance to visit the apartment. I learned the lesson in a hard way by spending a lot of my time online monitoring the updates of apartment offers on [immobilienscout](!https://www.immobilienscout24.de/), [wg-gesucht](!https://www.wg-gesucht.de/wohnungen-in-Stuttgart.124.2.0.0.html) or [ebay](!https://www.ebay-kleinanzeigen.de/stadt/stuttgart/) everyday, but in the end almost all of my inquiries went straight into the vacuum and never got an echo back. After somedays, I realised that maybe it is true that there are too many people online looking for a flat, and my messages are just among the tons of messages the landlords receive, so to increase my chance, I need to send messages as soon as the offer is put online. This Bot in Python can monitor the websites every minute, once it finds new offers it will send messages to the landlord automatically. Basically the whole process won't take more than 2 minutes since the offer is put online. 
+- Use responsibly and in line with website terms.
+- Site structure can change over time; selectors may need updates.
+- Messaging works best when the selected browser uses a profile already logged into your Immobilienscout24 account.
 
+## Requirements
 
-For wg-gesucht, here are things to pay attention to:
+- Python 3.9+
+- Google Chrome or Firefox
+- ChromeDriver (for Chrome) or geckodriver (for Firefox)
+- Python package: `selenium`
 
-0. the corresponding files are 
-	- immo.py --> wg-gesucht.py
-	- submit.py --> submit_wg.py
-	- immo_spider.py --> wg-gesucht-spider.py
-1. wg-gesucht.de asks for your username and password, which you need to write in the places in the submit_wg.py script.
-2. speaking German increases your chance of getting a offer. Try to force yourself speaking German. :)
-3. please don't abuse the script by sending requests too frequently to the website, otherwise they could take some anti-measures to rule out the bot, which is bad for everyone who wants to look for a flat using the bot.
-4. The script can be run on raspberry pi 3b. Some more questions please see (closed) issues before you open a new issue. Thanks. 
+Install dependencies:
 
-Good luck to your wohnung hunt.
+```bash
+pip install -r requirements.txt
+```
 
+## Files used by the script
 
-### Requirement
+- `immo.py`: main monitor loop and CLI
+- `submit.py`: browser/session, listing extraction, and message sending helpers
+- `message.txt`: your pre-written message (you create this file)
+- `seen_listings.json`: generated state file of already seen listings
+- `message_failures.jsonl`: generated log file for failed sends
+- `message_sent.jsonl`: generated log file for successful sends
 
-I have only tested the Bot on Linux (Debian, Ubuntu) and Mac. I am not sure about whether you can do some tricks and make it work on Windows, too. But worth trying.
+## Setup
 
-1. chromedriver. I take chrome as an example since it is my favorite browser, but you can also use other popular browsers because you can find their *driver*s. You need to have chrome installed. 
+1. Create `message.txt` in the repo root and put your full message there.
+  - You can start from `message.example.txt`.
+2. Collect saved search URL(s), e.g. from:
+    - `https://www.immobilienscout24.de/savedsearch/myscout/manage/`
+3. Decide whether to pass URLs directly via CLI or from a text file.
 
-   On Linux use the followling command to check if you have chromedriver installed
+Optional: create `searches.txt` with one URL per line.
 
-   `which chromedriver`
+- You can start from `searches.example.txt` and copy it to `searches.txt`.
 
-   if it is installed, then something like the following which tells you the path to the driver should appear
+## Usage
 
-   `/usr/local/bin/chromedriver` 
+### Monitor one saved search
 
-   if nothing appears, then you need to install chromedriver, using the following command on Linux (Debian or Ubuntu),
+```bash
+python immo.py --search-url "https://www.immobilienscout24.de/Suche/shape/...&saveSearchId=123456"
+```
 
-   `sudo apt-get install chromedriver`
+### Monitor multiple saved searches
 
-   and use the following command on Mac (if you use [homebrew](!https://brew.sh/)),
+```bash
+python immo.py \
+  --search-url "https://www.immobilienscout24.de/Suche/shape/...&saveSearchId=111" \
+  --search-url "https://www.immobilienscout24.de/Suche/shape/...&saveSearchId=222"
+```
 
-   `brew install chromedriver`
+### Monitor from file
 
-2. [Scrapy](!https://scrapy.org/), which is a package based on Python for writing web spiders. After/if you have python installed, then the following command should install *Scrapy* for you
+```bash
+python immo.py --search-file searches.txt
+```
 
-   `pip install scrapy`
+### Recommended: reuse logged-in Chrome profile
 
-### Files
+```bash
+python immo.py \
+  --search-file searches.txt \
+  --user-data-dir "C:\\Users\\<you>\\AppData\\Local\\Google\\Chrome\\User Data" \
+  --profile-directory "Default"
+```
 
-There are just 3 python scripts. 
+If login is required, the script opens browser and waits for you to log in once.
 
-`immo.py`
+### Firefox example
 
-`immo_spider.py`
+```bash
+python immo.py \
+  --browser firefox \
+  --search-file searches.txt \
+  --firefox-profile "/path/to/firefox/profile"
+```
 
-`submit.py`
+## Useful options
 
-Get the scripts by 
+- `--interval 60` polling interval in seconds (default `60`)
+- `--message-file message.txt` custom message file path
+- `--state-file seen_listings.json` custom state file path
+- `--failures-file message_failures.jsonl` custom failures log path
+- `--sent-file message_sent.jsonl` custom successful-sends log path
+- `--browser chrome|firefox` choose browser engine (default `chrome`)
+- `--headless` run without visible browser (not recommended for first login)
+- `--driver-path <path>` explicit webdriver path (ChromeDriver or geckodriver)
+- `--initial-send-existing` on first run, also message listings already visible now
+- `--dry-run` detect/report new listings but do not send any messages
+- `--user-data-dir ...` Chrome-only user data path
+- `--profile-directory ...` Chrome-only profile folder name
+- `--firefox-profile ...` Firefox-only profile directory path
+- `--import-cookies is24_cookies.json` restore session cookies before login checks
+- `--export-cookies is24_cookies.json` export current session cookies after login/bootstrap
 
-`git clone https://github.com/nickirk/immo.git`
+See all options:
 
+```bash
+python immo.py --help
+```
 
-### How it works
-Go into the directory: 
+## How failure reporting works
 
-`cd immo`
+When a new listing is found but auto-message cannot be submitted, the script:
 
-#### Modify the scripts according to your needs
+- prints `FAILED: <listing_url> | <reason>` to console
+- appends a JSON line to `message_failures.jsonl` with:
+  - timestamp
+  - search URL
+  - listing URL
+  - failure reason
 
-1. In `submit.py` file, you will see
+This gives you a clear manual follow-up list.
 
-`last_name.send_keys("last name")`
+If the site shows a human-verification/CAPTCHA page, the script logs this as a failure and skips that search cycle until you intervene manually.
 
-`first_name.send_keys("first name")`
+## Successful send audit log
 
-`street.send_keys("your current living street")`
+When a message is successfully sent, the script appends one JSON line to `message_sent.jsonl` containing:
 
-and etc. Replace the text with your own information. Especially in 
+- timestamp
+- search URL
+- listing URL
 
-`text_area.send_keys(u"Hallo,\n\n your message to the landlord. keep the 'u' before the message to make showing German in the message available. use \n as newline in your message.")`
+## Headless Pi4 session fallback (cookie export/import)
 
-write your message to the landlord. Please keep the 'u' in front of the message so that the special German letters will show in the message on the browser side. After this line, there are no more things needed to be modified. 
+This helps reduce how often you need interactive re-login on a headless Raspberry Pi.
 
-2. In `immo_spider.py` file, you need to replace the website links that fits your need. For example,
+1. Bootstrap login once on a machine/session with display:
 
-   ````python
-   start_urls = [
-	'https://www.example.de/Suche/S-2/Wohnung-Miete/Umkreissuche/etc'
-   	]
-   ````
-You can go to a website of your choice and enter your filter, e.g. price until 850 Euros. Click search, you will arrive at the page showing you the results. However, you need to choose the realtime (Aktualität) sorting so that the results you see are always the latest offers. Then copy the link address and paste it into the start_urls. You can put more than one links to it separated by comma.
+```bash
+python immo.py \
+  --search-file searches.txt \
+  --export-cookies is24_cookies.json
+```
 
-#### Create a Scrapy Spider project
+2. Copy `is24_cookies.json` securely to the Pi.
 
-First, we need to [create a new scrapy project](!https://docs.scrapy.org/en/latest/intro/tutorial.html#creating-a-project) 
-called immobot:
+3. Run headless on Pi with cookie import:
 
-`scrapy startproject immobot`
+```bash
+python immo.py \
+  --search-file searches.txt \
+  --headless \
+  --import-cookies is24_cookies.json \
+  --export-cookies is24_cookies.json
+```
 
-then you will have the following structure of directories and files:
+Notes:
 
-     immobot/                  #Working directory
-         scrapy.cfg            # deploy configuration file
-         immobot/             # project's Python module, you'll import your code from here
-             __init__.py
-             items.py          # project items definition file
-             pipelines.py      # project pipelines file
-             settings.py       # project settings file
-             spiders/          # a directory where you'll later put your spiders
-                 __init__.py
+- If imported cookies are expired/invalid, the script falls back to normal login flow.
+- Keep cookie files private (`chmod 600`) and never commit them to git.
+- Cookies may still expire or be invalidated by site/device/IP checks.
 
-Now let's go to the working directory called `immobot` which contains the file `scrapy.cfg` and another direcory which is also called `immobot`:
+## Legacy scripts
 
-`cd immobot`
-
-Now copy the 3 files into the following directories:
-
-`cp ../immo.py ../submit.py .`
-
-`cp ../immo_spider.py ./immobot/spiders/`
-
-after this you will have the following structure of directories and files 
-
-     immobot/                  #Working directory
-         immo.py
-         submit.py
-         scrapy.cfg            # deploy configuration file
-         immobot/             # project's Python module, you'll import your code from here
-             __init__.py
-             items.py          # project items definition file
-             pipelines.py      # project pipelines file
-             settings.py       # project settings file
-             spiders/          # a directory where you'll later put your spiders
-                 __init__.py
-                 immo_spider.py
-
-
-In the end, just run 
-
-`python immo.py`
-
-under you working directory *immobot*, the Bot will be running and doing everything for you.
-
-Further simpilfications of the scripts will be done to make it a blackbox tool.
-
-## Tips and troubleshooting
-You may run into issues, hopefully these tips can help:
-
-**chromedriver may be installed somewhere else** then asumed by the script. You can check this by running `which chromedriver`, it's result should be: `/usr/local/bin/chromedriver`. If it's not, then change this value in [submit.py]() in the line with `webdriver.Chrome('<pass in your value here>')`.
-
-**you've made changes, but nothing changed**. Remember to copy the `.py` files into the `immobot` folder.
-
-**testing** can be easily done by removing one of the id's from the `diff.dat` file. During the next check, the script will just consider this specific advertisement as a new one.
+- `wg-gesucht.py`, `wg-gesucht-spider.py`, and `submit_wg.py` are retained as legacy WG-Gesucht workflow.
+- `immo_spider.py` is now a legacy placeholder; current Immoscout flow is `immo.py` + `submit.py`.

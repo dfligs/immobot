@@ -109,3 +109,11 @@ dmypy.json
 .pyre/
 
 # End of https://www.gitignore.io/api/python
+
+# Local runtime/config files
+message.txt
+searches.txt
+is24_cookies.json
+seen_listings.json
+message_failures.jsonl
+message_sent.jsonl
